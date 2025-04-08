@@ -1,0 +1,72 @@
+# Byte-compiled Python files
+*.py[cod]
+
+# C extensions
+*.so
+
+# SQLite database
+db.sqlite3
+
+# Django migrations
+migrations/__pycache__/
+
+# Static files (if you're not using a CDN or external storage)
+# staticfiles/
+
+# Media files (if you're not using a CDN or external storage)
+# media/
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.iml
+
+# Miscellaneous
+.DS_Store
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+
+# Logs
+*.log
+
+# Django cache files
+__pycache__/
+
+# Django debug toolbar
+debug_toolbar/
+
+# Django debug toolbar SQL log files
+dt_sqlite3.db
+
+# Django debug toolbar templates
+debug_toolbar/templates/
+
+# Django debug toolbar static files
+debug_toolbar/static/
+
+# Django debug toolbar media files
+debug_toolbar/media/
+
+# Django debug toolbar cache files
+debug_toolbar/__pycache__/
+
+# Django debug toolbar logs
+debug_toolbar/*.log
+
+# Django debug toolbar SQL logs
+debug_toolbar/*.sql
+
+# Django debug toolbar templates cache
+debug_toolbar/templates/__pycache__/
+
+# Django debug toolbar static cache
+debug_toolbar/static/__pycache__/
+
+# Django debug toolbar media cache
+debug_toolbar/media/__pycache__/

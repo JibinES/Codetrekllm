@@ -1,0 +1,34 @@
+# Node modules
+node_modules/
+
+# Package lock files
+package-lock.json
+
+# Build output
+build/
+
+# Craco cache
+.craco/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.iml
+
+# Miscellaneous
+.DS_Store
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+
+# Logs
+*.log
+
+# npm debug logs
+npm-debug.log*
+
+# yarn debug logs
+yarn-debug.log*
+
+# yarn error logs
+yarn-error.log*
