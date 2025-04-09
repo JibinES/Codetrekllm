@@ -120,7 +120,7 @@ CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,
 
 # Ollama API settings
 OLLAMA_API_URL = os.getenv('OLLAMA_API_URL', 'http://localhost:11434/api/generate')
-MODEL_NAME = os.getenv('MODEL_NAME', 'gemma3:1b')
+MODEL_NAME = os.getenv('MODEL_NAME', 'codellama:latest')
 
 # ChromaDB settings
 CHROMADB_PATH = os.getenv('CHROMADB_PATH', './chroma_db')

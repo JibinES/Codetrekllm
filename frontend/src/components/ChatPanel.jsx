@@ -5,15 +5,18 @@ import {
   TextField, 
   IconButton, 
   Tooltip,
-  Typography
+  Typography,
+  Button
 } from '@mui/material';
 import { keyframes } from '@mui/material/styles';
 import LevelButtons from './LevelButtons';
 import TopicDropdown from './TopicDropdown';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import SendIcon from '@mui/icons-material/Send';
+import DescriptionIcon from '@mui/icons-material/Description';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import ReactMarkdown from 'react-markdown';
 
 const fadeIn = keyframes`
   from {
@@ -26,7 +29,8 @@ const fadeIn = keyframes`
   }
 `;
 
-export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, topics }) {
+export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, topics, onNewQuestion }) 
+  {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,7 +45,7 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
     if (topic) {
       setMessages([{
         type: 'bot',
-        content: `Hello! I can help you learn ${topic}. What would you like to know?`
+        content: `Hello! I can help you learn **${topic}**. What would you like to know?`
       }]);
       scrollToBottom();
     }
@@ -60,8 +64,6 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Uncomment below if using JWT auth
-          // 'Authorization': `Bearer ${yourToken}`,
         },
         body: JSON.stringify({
           message: inputValue,
@@ -72,9 +74,12 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
 
       const data = await response.json();
 
+      let rawOutput = data.bot_response?.content || "No response from server.";
+      const cleanOutput = rawOutput.replace(/<\|fim_.*?\|>/g, '');
+
       const botResponse = {
         type: 'bot',
-        content: data.reply || "No response from server.",
+        content: cleanOutput,
       };
 
       setMessages([...newMessages, botResponse]);
@@ -90,6 +95,53 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
       setLoading(false);
     }
   };
+
+  const handleGetQuestion = async () => {
+    if (!topic) return;
+  
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/problem-by-topic/?topic=${encodeURIComponent(topic)}&difficulty=${encodeURIComponent(level)}`);
+      const data = await res.json();
+  
+      if (res.ok) {
+        const { title, description, difficulty } = data;
+  
+        const questionContent = `### ${title}\n\n**Difficulty:** ${difficulty}\n\n${description}`;
+  
+        const questionMessage = {
+          type: 'bot',
+          content: questionContent,
+        };
+  
+        setMessages([...messages, questionMessage]);
+  
+        // 🔁 Call the Guide Me integration
+        if (onNewQuestion) {
+          onNewQuestion({ title, description, difficulty, fullText: questionContent });
+        }
+  
+      } else {
+        setMessages([...messages, {
+          type: 'bot',
+          content: `⚠️ ${data.error || 'Unable to fetch a question right now.'}`,
+        }]);
+      }
+  
+      scrollToBottom();
+    } catch (err) {
+      setMessages([...messages, {
+        type: 'bot',
+        content: "⚠️ Network error. Please try again later.",
+      }]);
+      scrollToBottom();
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+
+  
 
   const handleKeyPress = (event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -148,7 +200,45 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
       );
     }
 
-    return <Typography>{message.content}</Typography>;
+    return (
+      <ReactMarkdown
+        children={message.content}
+        components={{
+          p: ({ node, ...props }) => (
+            <Typography {...props} sx={{ whiteSpace: 'pre-wrap' }} />
+          ),
+          code({ node, inline, className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || '');
+            return !inline ? (
+              <SyntaxHighlighter
+                style={vscDarkPlus}
+                language={match?.[1] || 'text'}
+                PreTag="div"
+                customStyle={{
+                  borderRadius: '8px',
+                  padding: '12px',
+                }}
+                {...props}
+              >
+                {String(children).replace(/\n$/, '')}
+              </SyntaxHighlighter>
+            ) : (
+              <code
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  fontSize: '0.9em',
+                }}
+                {...props}
+              >
+                {children}
+              </code>
+            );
+          }
+        }}
+      />
+    );
   };
 
   return (
@@ -164,7 +254,20 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
         boxShadow: 4,
       }}
     >
-      <LevelButtons level={level} onLevelChange={onLevelChange} />
+      {/* Buttons Row */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
+        <LevelButtons level={level} onLevelChange={onLevelChange} />
+        <Button 
+          variant="contained" 
+          color="primary"
+          startIcon={<DescriptionIcon />}
+          onClick={handleGetQuestion}
+          disabled={!isTopicSelected || loading}
+        >
+          Get Question
+        </Button>
+      </Box>
+
       <TopicDropdown topic={topic} onTopicChange={onTopicChange} topics={topics} />
       
       {/* Messages Container */}

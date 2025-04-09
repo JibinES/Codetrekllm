@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Paper, Box, IconButton, Typography, Snackbar, Button } from '@mui/material';
 import Editor from "@monaco-editor/react";
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -6,10 +6,20 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DescriptionIcon from '@mui/icons-material/Description';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import axios from 'axios';
 
-export default function CodeInterface({ onCodeRun }) {
+export default function CodeInterface({ onCodeRun, currentQuestion }) {
   const [code, setCode] = useState('// Start coding here...');
   const [showCopyNotification, setShowCopyNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [showNotification, setShowNotification] = useState(false);
+
+  // Automatically populate the editor if needed (optional)
+  useEffect(() => {
+    if (currentQuestion?.fullText) {
+      setCode(currentQuestion.fullText);
+    }
+  }, [currentQuestion]);
 
   const handleEditorChange = (value) => {
     setCode(value || '');
@@ -26,11 +36,9 @@ export default function CodeInterface({ onCodeRun }) {
 
   const handleRunCode = () => {
     try {
-      // Safety check for eval
       if (code.includes('import') || code.includes('require')) {
         throw new Error('Import statements are not allowed for security reasons');
       }
-      // eslint-disable-next-line no-new-func
       const result = Function(code)();
       onCodeRun({
         type: 'code-output',
@@ -50,6 +58,45 @@ export default function CodeInterface({ onCodeRun }) {
         }
       });
     }
+  };
+
+  const handleGuideMe = async () => {
+    try {
+      const questionText = currentQuestion?.fullText || code; // fallback to code if no question
+      const response = await axios.post('/api/guide-me/', { question: questionText });
+      const reply = response.data?.response || 'No response from AI.';
+      onCodeRun({
+        type: 'guide-me',
+        content: {
+          input: questionText,
+          output: reply
+        }
+      });
+      setNotificationMessage("AI guidance received.");
+    } catch (error) {
+      console.error(error);
+      setNotificationMessage("Error getting guidance.");
+    }
+    setShowNotification(true);
+  };
+
+  const handleTestLogic = async () => {
+    try {
+      const response = await axios.post('/api/evaluate-code/', { code: code });
+      const result = response.data || 'No response from evaluator.';
+      onCodeRun({
+        type: 'evaluate',
+        content: {
+          input: code,
+          output: result
+        }
+      });
+      setNotificationMessage("Code evaluation completed.");
+    } catch (error) {
+      console.error(error);
+      setNotificationMessage("Error evaluating code.");
+    }
+    setShowNotification(true);
   };
 
   return (
@@ -146,6 +193,7 @@ export default function CodeInterface({ onCodeRun }) {
           variant="contained" 
           color="primary"
           startIcon={<DescriptionIcon />}
+          onClick={handleGuideMe}
         >
           Guide me
         </Button>
@@ -154,6 +202,7 @@ export default function CodeInterface({ onCodeRun }) {
           variant="contained" 
           color="secondary"
           startIcon={<InsertDriveFileIcon />}
+          onClick={handleTestLogic}
         >
           Test my logic
         </Button>
@@ -165,6 +214,14 @@ export default function CodeInterface({ onCodeRun }) {
         autoHideDuration={2000}
         onClose={() => setShowCopyNotification(false)}
         message="Code copied to clipboard"
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
+
+      <Snackbar
+        open={showNotification}
+        autoHideDuration={3000}
+        onClose={() => setShowNotification(false)}
+        message={notificationMessage}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Box>

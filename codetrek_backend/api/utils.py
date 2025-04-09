@@ -53,6 +53,30 @@ class OllamaClient:
         return OllamaClient.generate_response(prompt)
     
     @staticmethod
+    def guide_user_through_question(title, description):
+        guide_prompt = f"""
+                            You are an expert competitive programming tutor helping a student understand a coding problem.
+
+                            📌 **Problem Title:** {title}
+
+                            📄 **Problem Description:**
+                            {description}
+
+                            🧠 Your task is to help the student by:
+                            - Explaining the core concepts involved in solving the problem.
+                            - Recommending what topics or algorithms to revise.
+                            - Suggesting a logical approach (e.g. brute-force vs optimized).
+                            - Giving 2-3 progressive hints to guide their thinking.
+                            🚫 **DO NOT** write or suggest the code. Only provide strategic guidance.
+
+                            ✍️ Keep your tone friendly, clear, and focused on learning.
+                            """
+        return OllamaClient.generate_response(guide_prompt)
+
+    
+    
+    
+    @staticmethod
     def evaluate_code(problem_title, problem_description, user_code):
         eval_prompt = f"""
         **Problem:** {problem_title}
@@ -103,4 +127,4 @@ class DatasetManager:
         if filtered_df.empty:
             return None
         
-        return filtered_df.sample(n=1).iloc[0]
+        return filtered_df.sample(n=1).iloc[0].to_dict()

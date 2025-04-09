@@ -22,6 +22,8 @@ urlpatterns = [
     # Chat URLs
     path('chat/', views.chat_message, name='chat'),
     path('chat/history/', views.chat_history, name='chat-history'),
+    path('guide-me/', views.guide_me, name='guide-me'),
+
 
     # Code evaluation URL
     path('evaluate-code/', views.evaluate_code, name='evaluate-code'),

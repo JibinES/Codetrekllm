@@ -115,6 +115,18 @@ def get_problem_by_topic(request):
     )
     
     return Response(ProblemSerializer(problem).data)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def guide_me(request):
+    data = request.data
+    title = data.get("title", "")
+    description = data.get("description", "")
+
+    if not title or not description:
+        return Response({"error": "Title and description are required."}, status=400)
+
+    response = OllamaClient.guide_user_through_question(title, description)
+    return Response({"guide": response})
 
 # Chat views
 @api_view(['POST'])
