@@ -14,7 +14,7 @@ export default function LevelButtons({ level, onLevelChange }) {
       <Button
         onClick={() => onLevelChange('medium')}
         variant="contained"
-        color={level === 'intermediate' ? 'primary' : 'inherit'}
+        color={level === 'medium' ? 'primary' : 'inherit'}
       >
         Medium
       </Button>

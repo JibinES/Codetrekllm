@@ -8,12 +8,11 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import axios from 'axios';
 
-export default function CodeInterface({ currentQuestion, onCodeRun, onGuideReply }){
+export default function CodeInterface({ currentQuestion, onCodeRun, onGuideReply }) {
   const [code, setCode] = useState('// Start coding here...');
   const [showCopyNotification, setShowCopyNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [showNotification, setShowNotification] = useState(false);
-
 
   const handleEditorChange = (value) => {
     setCode(value || '');
@@ -56,7 +55,7 @@ export default function CodeInterface({ currentQuestion, onCodeRun, onGuideReply
 
   const handleGuideMe = async () => {
     try {
-      const questionText = currentQuestion?.fullText || code;
+      console.log('Guide Me button clicked');
       const response = await axios.post('/api/guide-me/', {
         title: currentQuestion?.title,
         description: currentQuestion?.description,
@@ -64,59 +63,48 @@ export default function CodeInterface({ currentQuestion, onCodeRun, onGuideReply
       });
   
       const reply = response.data.guide || 'No response from AI.';
+      console.log('Received guide reply:', reply);
   
-      // 👇 Send to code output UI
-      onCodeRun({
-        type: 'guide-me',
-        content: {
-          input: questionText,
-          output: reply
-        }
-      });
-  
-      // ✅ Update chat as a message from the bot
+      // Send directly to chat panel as a bot message
       if (typeof onGuideReply === 'function') {
+        console.log('Calling onGuideReply with reply');
         onGuideReply(reply);
+      } else {
+        console.error('onGuideReply is not a function');
       }
   
       setNotificationMessage("AI guidance received.");
     } catch (error) {
-      console.error(error);
+      console.error('Error getting guidance:', error);
       setNotificationMessage("Error getting guidance.");
     }
     setShowNotification(true);
   };    
-  
 
   const handleTestLogic = async () => {
     try {
+      console.log('Test Logic button clicked');
       const response = await axios.post('/api/evaluate-code/', {
-        title: currentQuestion.title,
-        description: currentQuestion.description,
+        title: currentQuestion?.title,
+        description: currentQuestion?.description,
         code: code
       });
   
       const result = response.data.feedback || 'No response from evaluator.';
+      console.log('Received evaluation result:', result);
   
-      onCodeRun({
-        type: 'evaluate',
-        content: {
-          input: code,
-          output: result
-        }
-      });
+      // Only send to chat as a bot message - no longer duplicating in output
+      if (typeof onGuideReply === 'function') {
+        onGuideReply(`## Code Evaluation\n${result}`);
+      }
   
       setNotificationMessage("Code evaluation completed.");
     } catch (error) {
-      console.error(error);
+      console.error('Error evaluating code:', error);
       setNotificationMessage("Error evaluating code.");
     }
     setShowNotification(true);
   };
-  
-  
-
-
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -213,6 +201,7 @@ export default function CodeInterface({ currentQuestion, onCodeRun, onGuideReply
           color="primary"
           startIcon={<DescriptionIcon />}
           onClick={handleGuideMe}
+          disabled={!currentQuestion}
         >
           Guide me
         </Button>
@@ -222,6 +211,7 @@ export default function CodeInterface({ currentQuestion, onCodeRun, onGuideReply
           color="secondary"
           startIcon={<InsertDriveFileIcon />}
           onClick={handleTestLogic}
+          disabled={!currentQuestion || !code.trim() || code === '// Start coding here...'}
         >
           Test my logic
         </Button>

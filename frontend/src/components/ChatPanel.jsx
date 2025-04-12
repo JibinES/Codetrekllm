@@ -35,10 +35,12 @@ export default function ChatPanel({
   topic,
   onTopicChange,
   topics,
+  messages,
+  setMessages,
   onNewQuestion,
-  onGuideReply
+  onCodeRun
 }) {
-  const [messages, setMessages] = useState([]);
+  
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
@@ -56,21 +58,12 @@ export default function ChatPanel({
       }]);
       scrollToBottom();
     }
-  }, [topic]);
+  }, [topic, setMessages]);
 
   useEffect(() => {
-    if (typeof onGuideReply === 'function') {
-      onGuideReply((replyText) => {
-        console.log('Guide Reply:', replyText); // <--- add this
-        setMessages(prev => [...prev, {
-          type: 'bot',
-          content: replyText
-        }]);
-        scrollToBottom();
-      });
-    }
-  }, [onGuideReply]);
-  
+    // Always scroll to bottom when messages change
+    scrollToBottom();
+  }, [messages]);
   
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -88,8 +81,9 @@ export default function ChatPanel({
         },
         body: JSON.stringify({ message: inputValue, topic, level })
       });
-
       const data = await response.json();
+      console.log('Chat API response:', data);
+
       const rawOutput = data.bot_response?.content || "No response from server.";
       const cleanOutput = rawOutput.replace(/<\|fim_.*?\|>/g, '');
 
@@ -97,6 +91,7 @@ export default function ChatPanel({
       setMessages([...newMessages, botResponse]);
       scrollToBottom();
     } catch (error) {
+      console.error('Error in sending message:', error);
       setMessages([...newMessages, {
         type: 'bot',
         content: "⚠️ Something went wrong while connecting to the server.",
@@ -134,6 +129,7 @@ export default function ChatPanel({
 
       scrollToBottom();
     } catch (err) {
+      console.error('Error fetching question:', err);
       setMessages(prev => [...prev, {
         type: 'bot',
         content: "⚠️ Network error. Please try again later.",
@@ -184,14 +180,14 @@ export default function ChatPanel({
       );
     }
 
+    // For regular messages, render markdown content
     return (
       <ReactMarkdown
-        children={message.content}
         components={{
           p: ({ node, ...props }) => (
-            <Typography {...props} sx={{ whiteSpace: 'pre-wrap' }} />
+            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }} {...props} />
           ),
-          code({ node, inline, className, children, ...props }) {
+          code: ({ node, inline, className, children, ...props }) => {
             const match = /language-(\w+)/.exec(className || '');
             return !inline ? (
               <SyntaxHighlighter
@@ -218,7 +214,9 @@ export default function ChatPanel({
             );
           }
         }}
-      />
+      >
+        {message.content.toString()}
+      </ReactMarkdown>
     );
   };
 

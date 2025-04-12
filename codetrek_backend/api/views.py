@@ -135,16 +135,20 @@ def guide_me(request):
 def chat_message(request):
     user_message = request.data.get('message', '')
     
+
     if not user_message:
         return Response({'error': 'Message cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = request.user if request.user.is_authenticated else get_fallback_user()
 
+
+    # user = request.user if request.user.is_authenticated else get_fallback_user()
+    user = User.objects.get(id=1)
     user_chat = ChatMessage.objects.create(
         user=user,
         message_type='user',
         content=user_message
     )
+
 
     retrieved_concept = chroma_manager.query_concept(user_message)
     ai_response = OllamaClient.get_concept_explanation(user_message, retrieved_concept)
@@ -154,7 +158,8 @@ def chat_message(request):
         message_type='bot',
         content=ai_response
     )
-    
+    print( ChatMessageSerializer(user_chat).data)
+    print(ChatMessageSerializer(bot_chat).data)
     return Response({
         'user_message': ChatMessageSerializer(user_chat).data,
         'bot_response': ChatMessageSerializer(bot_chat).data

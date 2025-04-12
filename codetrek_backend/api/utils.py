@@ -39,7 +39,7 @@ class OllamaClient:
             "top_p": 0.9,
             "num_predict": 200
             }
-                },timeout=60
+                },timeout=120
             )
             if response.status_code == 200:
                 return response.json().get("response", "No valid response from model.")
@@ -53,7 +53,7 @@ class OllamaClient:
         You are a competitive programming tutor. Use the following retrieved concept to provide a better answer.
         **User Query:** {query}
         **Retrieved Concept:** {retrieved_concept if retrieved_concept else 'No relevant concept found in ChromaDB.'}
-        Please provide a detailed yet concise explanation.
+        Please provide a detailed yet concise explanation whic are not too long.
         """
         return OllamaClient.generate_response(prompt)
     
@@ -73,6 +73,7 @@ class OllamaClient:
                             - Suggesting a logical approach (e.g. brute-force vs optimized).
                             - Giving 2-3 progressive hints to guide their thinking.
                             🚫 **DO NOT** write or suggest the code. Only provide strategic guidance.
+                            - make sure the respone not too long
 
                             ✍️ Keep your tone friendly, clear, and focused on learning.
                             """
@@ -94,6 +95,7 @@ class OllamaClient:
         - Correctness, Efficiency, Edge Cases
         - Provide feedback but no direct solution
         - Stricty dont provide any code
+        - make sure the respone not too long
         """
         return OllamaClient.generate_response(eval_prompt)
 
