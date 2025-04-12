@@ -5,4 +5,7 @@ fuzzywuzzy==0.18.0
 pandas==2.2.3
 python-dotenv==1.1.0
 Requests==2.32.3
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9d4cff0f806a46ed4b39377954aae89f6f4380a4
