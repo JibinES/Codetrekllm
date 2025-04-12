@@ -37,9 +37,10 @@ class OllamaClient:
                     "options": {
             "temperature": 0.7,
             "top_p": 0.9,
-            "num_predict": 200
+            "num_predict": 300,
+            "max_tokens" : 1500
             }
-                },timeout=120
+                },timeout=180
             )
             if response.status_code == 200:
                 return response.json().get("response", "No valid response from model.")
@@ -53,8 +54,8 @@ class OllamaClient:
         You are a competitive programming tutor. Use the following retrieved concept to provide a better answer.
         **User Query:** {query}
         **Retrieved Concept:** {retrieved_concept if retrieved_concept else 'No relevant concept found in ChromaDB.'}
-        Please provide a detailed yet concise explanation whic are not too long.
-        """
+        Please provide a detailed explanation only if words like "Explain","in detail"
+ are there if not provide short explanations and list the sub headings with a one,two line explainantion        """
         return OllamaClient.generate_response(prompt)
     
     @staticmethod
@@ -68,12 +69,11 @@ class OllamaClient:
                             {description}
 
                             🧠 Your task is to help the student by:
-                            - Explaining the core concepts involved in solving the problem.
-                            - Recommending what topics or algorithms to revise.
-                            - Suggesting a logical approach (e.g. brute-force vs optimized).
+                            - List out the core concepts involved in solving the problem.
+                            
                             - Giving 2-3 progressive hints to guide their thinking.
                             🚫 **DO NOT** write or suggest the code. Only provide strategic guidance.
-                            - make sure the respone not too long
+                            - make sure the respone is short
 
                             ✍️ Keep your tone friendly, clear, and focused on learning.
                             """
@@ -92,10 +92,18 @@ class OllamaClient:
         {user_code}
         ```
         📌 **Evaluation Criteria:**
-        - Correctness, Efficiency, Edge Cases
-        - Provide feedback but no direct solution
-        - Stricty dont provide any code
-        - make sure the respone not too long
+- **Correctness:** Verify that the solution solves the problem as described.
+- **Efficiency:** Evaluate the time and space complexity of the user's code.
+- **Edge Cases:** Identify potential edge cases and how well the code handles them.
+  
+📝 **Feedback:**
+- Assess the time and space complexity of the code. Mention the user's code's time and space complexity.
+- Provide concise and constructive feedback on how the code could be improved, without providing the actual solution.
+- Focus on **optimization** suggestions and **possible pitfalls**.
+
+- make sure the response is short and consise
+  
+⚠️ **Note:** Do not provide any code directly.
         """
         return OllamaClient.generate_response(eval_prompt)
 
