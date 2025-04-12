@@ -115,6 +115,7 @@ def get_problem_by_topic(request):
     )
     
     return Response(ProblemSerializer(problem).data)
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def guide_me(request):
@@ -171,32 +172,16 @@ def chat_history(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def evaluate_code(request):
-    problem_id = request.data.get('problem_id')
-    code = request.data.get('code', '')
-    language = request.data.get('language', 'python')
-    
-    if not problem_id or not code:
-        return Response({'error': 'Problem ID and code are required'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    problem = get_object_or_404(Problem, id=problem_id)
-    
-    feedback = OllamaClient.evaluate_code(problem.title, problem.description, code)
+    problem_title = request.data.get('title')
+    problem_description = request.data.get('description')
+    user_code = request.data.get('code', '')
 
-    user = request.user if request.user.is_authenticated else get_fallback_user()
+    if not problem_title or not user_code:
+        return Response({'error': 'Title and code are required'}, status=400)
 
-    submission = CodeSubmission.objects.create(
-        user=user,
-        problem=problem,
-        code=code,
-        language=language,
-        feedback=feedback,
-        is_correct=False
-    )
-    
-    return Response({
-        'submission': CodeSubmissionSerializer(submission).data,
-        'feedback': feedback
-    })
+    feedback = OllamaClient.evaluate_code(problem_title, problem_description, user_code)
+    return Response({'feedback': feedback})
+
 
 # File upload view
 @api_view(['POST'])

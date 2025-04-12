@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Box, 
-  Paper, 
-  TextField, 
-  IconButton, 
+import {
+  Box,
+  Paper,
+  TextField,
+  IconButton,
   Tooltip,
   Typography,
   Button
@@ -29,8 +29,15 @@ const fadeIn = keyframes`
   }
 `;
 
-export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, topics, onNewQuestion }) 
-  {
+export default function ChatPanel({
+  level,
+  onLevelChange,
+  topic,
+  onTopicChange,
+  topics,
+  onNewQuestion,
+  onGuideReply
+}) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,6 +58,20 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
     }
   }, [topic]);
 
+  useEffect(() => {
+    if (typeof onGuideReply === 'function') {
+      onGuideReply((replyText) => {
+        console.log('Guide Reply:', replyText); // <--- add this
+        setMessages(prev => [...prev, {
+          type: 'bot',
+          content: replyText
+        }]);
+        scrollToBottom();
+      });
+    }
+  }, [onGuideReply]);
+  
+  
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
@@ -65,31 +86,21 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message: inputValue,
-          topic: topic,
-          level: level,
-        })
+        body: JSON.stringify({ message: inputValue, topic, level })
       });
 
       const data = await response.json();
-
-      let rawOutput = data.bot_response?.content || "No response from server.";
+      const rawOutput = data.bot_response?.content || "No response from server.";
       const cleanOutput = rawOutput.replace(/<\|fim_.*?\|>/g, '');
 
-      const botResponse = {
-        type: 'bot',
-        content: cleanOutput,
-      };
-
+      const botResponse = { type: 'bot', content: cleanOutput };
       setMessages([...newMessages, botResponse]);
       scrollToBottom();
     } catch (error) {
-      const errorMessage = {
+      setMessages([...newMessages, {
         type: 'bot',
-        content: "Oops! Something went wrong connecting to the server.",
-      };
-      setMessages([...newMessages, errorMessage]);
+        content: "⚠️ Something went wrong while connecting to the server.",
+      }]);
       scrollToBottom();
     } finally {
       setLoading(false);
@@ -98,39 +109,32 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
 
   const handleGetQuestion = async () => {
     if (!topic) return;
-  
+
     setLoading(true);
     try {
       const res = await fetch(`/api/problem-by-topic/?topic=${encodeURIComponent(topic)}&difficulty=${encodeURIComponent(level)}`);
       const data = await res.json();
-  
+
       if (res.ok) {
         const { title, description, difficulty } = data;
-  
         const questionContent = `### ${title}\n\n**Difficulty:** ${difficulty}\n\n${description}`;
-  
-        const questionMessage = {
-          type: 'bot',
-          content: questionContent,
-        };
-  
-        setMessages([...messages, questionMessage]);
-  
-        // 🔁 Call the Guide Me integration
+        const questionMessage = { type: 'bot', content: questionContent };
+
+        setMessages(prev => [...prev, questionMessage]);
+
         if (onNewQuestion) {
           onNewQuestion({ title, description, difficulty, fullText: questionContent });
         }
-  
       } else {
-        setMessages([...messages, {
+        setMessages(prev => [...prev, {
           type: 'bot',
           content: `⚠️ ${data.error || 'Unable to fetch a question right now.'}`,
         }]);
       }
-  
+
       scrollToBottom();
     } catch (err) {
-      setMessages([...messages, {
+      setMessages(prev => [...prev, {
         type: 'bot',
         content: "⚠️ Network error. Please try again later.",
       }]);
@@ -139,9 +143,6 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
       setLoading(false);
     }
   };
-  
-
-  
 
   const handleKeyPress = (event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -151,7 +152,7 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
   };
 
   const handleFileUpload = (event) => {
-    // TODO: Implement file upload logic to backend
+    // TODO: Implement file upload logic
   };
 
   const isTopicSelected = Boolean(topic);
@@ -160,39 +161,22 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
     if (message.type === 'code-output') {
       return (
         <Box sx={{ width: '100%' }}>
-          <Box sx={{ mb: 1 }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              Code Output:
-            </Typography>
-          </Box>
-          <Box sx={{ 
-            backgroundColor: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: 1,
-            overflow: 'hidden'
-          }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1 }}>
+            Code Output:
+          </Typography>
+          <Box sx={{ backgroundColor: 'rgba(0, 0, 0, 0.2)', borderRadius: 1 }}>
             <SyntaxHighlighter
               language="javascript"
               style={vscDarkPlus}
-              customStyle={{
-                margin: 0,
-                padding: '12px',
-                backgroundColor: 'transparent',
-              }}
+              customStyle={{ margin: 0, padding: '12px', backgroundColor: 'transparent' }}
             >
-              {typeof message.content.output === 'object' 
+              {typeof message.content.output === 'object'
                 ? JSON.stringify(message.content.output, null, 2)
                 : String(message.content.output)}
             </SyntaxHighlighter>
           </Box>
           {!message.content.success && (
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                color: 'error.main',
-                mt: 1,
-                display: 'block'
-              }}
-            >
+            <Typography variant="caption" sx={{ color: 'error.main', mt: 1 }}>
               Execution failed
             </Typography>
           )}
@@ -214,10 +198,7 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
                 style={vscDarkPlus}
                 language={match?.[1] || 'text'}
                 PreTag="div"
-                customStyle={{
-                  borderRadius: '8px',
-                  padding: '12px',
-                }}
+                customStyle={{ borderRadius: '8px', padding: '12px' }}
                 {...props}
               >
                 {String(children).replace(/\n$/, '')}
@@ -257,8 +238,8 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
       {/* Buttons Row */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
         <LevelButtons level={level} onLevelChange={onLevelChange} />
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           color="primary"
           startIcon={<DescriptionIcon />}
           onClick={handleGetQuestion}
@@ -269,41 +250,30 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
       </Box>
 
       <TopicDropdown topic={topic} onTopicChange={onTopicChange} topics={topics} />
-      
+
       {/* Messages Container */}
-      <Box sx={{ 
-        flexGrow: 1, 
-        overflowY: 'auto', 
+      <Box sx={{
+        flexGrow: 1,
+        overflowY: 'auto',
         mt: 2,
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
       }}>
         {!isTopicSelected ? (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100%',
-              opacity: 0.7
-            }}
-          >
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', opacity: 0.7 }}>
             <Typography variant="body1">
               Please select a topic to start the conversation
             </Typography>
           </Box>
         ) : (
           messages.map((message, index) => (
-            <Box
-              key={index}
-              sx={{
-                display: 'flex',
-                justifyContent: message.type === 'code-output' ? 'flex-start' : 
-                  message.type === 'user' ? 'flex-end' : 'flex-start',
-                mb: 2,
-              }}
-            >
+            <Box key={index} sx={{
+              display: 'flex',
+              justifyContent: message.type === 'code-output' ? 'flex-start' :
+                message.type === 'user' ? 'flex-end' : 'flex-start',
+              mb: 2,
+            }}>
               <Paper
                 elevation={0}
                 sx={{
@@ -311,8 +281,8 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
                   maxWidth: message.type === 'code-output' ? '100%' : '80%',
                   backgroundColor: 'transparent',
                   border: '1px solid',
-                  borderColor: message.type === 'user' 
-                    ? 'rgba(255, 51, 102, 0.3)' 
+                  borderColor: message.type === 'user'
+                    ? 'rgba(255, 51, 102, 0.3)'
                     : 'rgba(255, 255, 255, 0.1)',
                   borderRadius: 2,
                 }}
@@ -326,19 +296,17 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
       </Box>
 
       {/* Prompt Area */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          p: 2,
-          mt: 'auto',
-          backgroundColor: 'rgba(255, 255, 255, 0.03)',
-          borderRadius: 1,
-          opacity: isTopicSelected ? 1 : 0.5,
-          pointerEvents: isTopicSelected ? 'auto' : 'none',
-        }}
-      >
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2,
+        p: 2,
+        mt: 'auto',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: 1,
+        opacity: isTopicSelected ? 1 : 0.5,
+        pointerEvents: isTopicSelected ? 'auto' : 'none',
+      }}>
         <TextField
           variant="outlined"
           placeholder={isTopicSelected ? "Type your message..." : "Select a topic to start chatting"}
@@ -364,7 +332,7 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
             }
           }}
         />
-        
+
         <input
           type="file"
           ref={fileInputRef}
@@ -372,7 +340,7 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
           accept=".js,.pdf,.jpg,.jpeg,.png,.txt,.doc,.docx,.json"
           style={{ display: 'none' }}
         />
-        
+
         <Tooltip title={isTopicSelected ? "Upload File" : "Select a topic first"}>
           <span>
             <IconButton
@@ -390,10 +358,10 @@ export default function ChatPanel({ level, onLevelChange, topic, onTopicChange, 
             </IconButton>
           </span>
         </Tooltip>
-        
+
         <Tooltip title={isTopicSelected ? "Send message" : "Select a topic first"}>
           <span>
-            <IconButton 
+            <IconButton
               onClick={handleSendMessage}
               disabled={!isTopicSelected || loading}
               sx={{

@@ -1,31 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Box, ThemeProvider } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import Header from './components/Header';
 import ChatPanel from './components/ChatPanel';
 import CodeInterface from './components/CodeInterface';
-import { chat, evaluate, login, register, upload } from './services/api';
 
-// Theme Configuration
 const darkTheme = createTheme({
   palette: {
     mode: "dark",
     background: {
-      default: "#1A1A1A", // Almost black
-      paper: "#252525", // Dark charcoal
+      default: "#1A1A1A",
+      paper: "#252525",
     },
     text: {
-      primary: "#F5F5F5", // Almost white
-      secondary: "#B3B3B3", // Light gray
+      primary: "#F5F5F5",
+      secondary: "#B3B3B3",
     },
     primary: {
-      main: "#FF3366", // Dark pink
+      main: "#FF3366",
       light: "#FF6B99",
       dark: "#CC0033",
       contrastText: "#fff",
     },
     secondary: {
-      main: "#990033", // Deep red
+      main: "#990033",
       light: "#CC0044",
       dark: "#660022",
       contrastText: "#fff",
@@ -41,7 +39,7 @@ const darkTheme = createTheme({
       dark: "#CC7A00",
     },
     success: {
-      main: "#4D0099", // Deep purple for success
+      main: "#4D0099",
       light: "#6600CC",
       dark: "#330066",
     }
@@ -52,7 +50,7 @@ const darkTheme = createTheme({
       fontSize: '2.5rem',
       fontWeight: 700,
       letterSpacing: '-0.01em',
-      color: '#FF3366', // Dark pink headers
+      color: '#FF3366',
     },
     h2: {
       fontSize: '2rem',
@@ -78,7 +76,7 @@ const darkTheme = createTheme({
           borderRadius: 4,
           '& .MuiOutlinedInput-root': {
             '& fieldset': {
-              borderColor: 'rgba(255, 51, 102, 0.3)', // Dark pink border
+              borderColor: 'rgba(255, 51, 102, 0.3)',
             },
             '&:hover fieldset': {
               borderColor: 'rgba(255, 51, 102, 0.5)',
@@ -142,11 +140,10 @@ const darkTheme = createTheme({
   shadows: [
     'none',
     '0 0 1px rgba(255,51,102,0.1), 0 2px 4px rgba(0,0,0,0.2)',
-    // Add more shadows if needed
   ],
 });
 
-// Constants
+// Topics List
 const TOPICS = [
   'Arrays',
   'Linked Lists',
@@ -156,11 +153,24 @@ const TOPICS = [
   'Graphs',
 ];
 
-// Main Component
 export default function ChatbotUI() {
   const [level, setLevel] = useState('easy');
   const [topic, setTopic] = useState('');
   const [messages, setMessages] = useState([]);
+  const [currentQuestion, setCurrentQuestion] = useState(null); // ✅ store the current problem
+
+  const guideReplyCallbackRef = useRef(null);
+
+  const onGuideReply = (replyText) => {
+    setMessages(prev => [...prev, { type: 'bot', content: replyText }]);
+    if (guideReplyCallbackRef.current) {
+      guideReplyCallbackRef.current(replyText);
+    } 
+  };
+
+  const registerGuideReplyCallback = (callback) => {
+    guideReplyCallbackRef.current = callback;
+  };
 
   const handleLevelChange = (selectedLevel) => {
     setLevel(selectedLevel);
@@ -170,14 +180,17 @@ export default function ChatbotUI() {
     setTopic(newTopic);
   };
 
+  // ✅ This is used when evaluation result is returned
   const handleCodeRun = (result) => {
     const panel = document.querySelector('[role="tabpanel"]');
     if (panel) {
       panel.scrollTop = panel.scrollHeight;
     }
+
+    // Push result into chat
     setMessages(prev => [...prev, {
-      type: 'code-output',
-      content: result
+      type: 'bot',
+      content: result.output
     }]);
   };
 
@@ -198,9 +211,9 @@ export default function ChatbotUI() {
     gap: 3,
     overflow: 'hidden',
     '& > *': {
-      flex: '1 1 50%', // Equal width for both panels
-      minWidth: '400px', // Minimum width
-      maxWidth: '50%', // Maximum width
+      flex: '1 1 50%',
+      minWidth: '400px',
+      maxWidth: '50%',
     }
   };
 
@@ -217,8 +230,14 @@ export default function ChatbotUI() {
             topics={TOPICS}
             messages={messages}
             setMessages={setMessages}
+            onNewQuestion={setCurrentQuestion}       
+            onGuideReply={registerGuideReplyCallback}
           />
-          <CodeInterface onCodeRun={handleCodeRun} />
+          <CodeInterface
+            onCodeRun={handleCodeRun}                
+            currentQuestion={currentQuestion}        
+            onGuideReply={onGuideReply}
+          />
         </Box>
       </Box>
     </ThemeProvider>

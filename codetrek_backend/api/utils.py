@@ -33,8 +33,13 @@ class OllamaClient:
                 json={
                     "model": settings.MODEL_NAME,
                     "prompt": prompt,
-                    "stream": False
-                }
+                    "stream": False,
+                    "options": {
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "num_predict": 200
+            }
+                },timeout=60
             )
             if response.status_code == 200:
                 return response.json().get("response", "No valid response from model.")
@@ -88,6 +93,7 @@ class OllamaClient:
         📌 **Evaluation Criteria:**
         - Correctness, Efficiency, Edge Cases
         - Provide feedback but no direct solution
+        - Stricty dont provide any code
         """
         return OllamaClient.generate_response(eval_prompt)
 
